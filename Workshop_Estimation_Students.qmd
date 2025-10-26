@@ -1,0 +1,129 @@
+---
+title: "Estimating Linear Models in R: "
+subtitle: "from Ordinary Least Squares to Maximum Entropy via GCEstim"
+title-block-banner: "#70AD47"
+title-block-banner-color: "white"
+date: 2025-10-27
+format: 
+  html:
+    toc: true
+    toc_float: yes
+    toc-location: left
+    toc-depth: 6
+    theme: Sandstone
+    highlight-style: Ayu-dark
+    code-link: true
+    code-fold: show
+    code-tools: true
+    df-print: paged
+number-sections: true
+editor: source
+---
+
+## Packages
+
+```{r, echo=TRUE,warning=FALSE,message=FALSE}
+# install.packages("devtools")
+library(devtools)
+# install.packages("ggcorrplot")
+library(ggcorrplot)
+# install.packages("glmnet")
+library(glmnet)
+# install.packages("GCEstim")
+library(GCEstim)
+```
+
+## Simulated Data
+
+### Generate Data
+
+```{r,echo=TRUE}
+n = 100 # Number of individuals
+intercept.beta = 0 # Intercept
+y.gen.cont.beta = c(3, 6, 9) # Coefficients used for generating y
+cont.k = 0 # Number of noisy continuous variables 
+condnumber = 1 # Condition number of the X matrix 
+seed <- 1357
+
+simulated_data_coef <- 
+  c(intercept.beta,
+    rep(0, cont.k),
+    y.gen.cont.beta)
+```
+
+```{r,echo=TRUE}
+
+simulated_data <-
+  fngendata(
+    n = n,
+    cont.k = cont.k, 
+    y.gen.cont.beta = y.gen.cont.beta,
+    intercept.beta = intercept.beta,
+    Xgenerator.method = "svd",
+    condnumber = condnumber,
+    seed = seed)
+
+prop_train = 0.7
+
+set.seed(seed)
+ind <- sample(1:n,
+              floor(prop_train * n))
+
+simulated_data_train <- simulated_data[ind,]
+simulated_data_test <- simulated_data[-ind,]
+```
+
+#### Summary
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+summary(simulated_data)
+```
+
+#### Correlation matrix
+
+```{r,echo=TRUE}
+ggcorrplot::ggcorrplot(
+  cor(simulated_data),
+  lab = TRUE,
+  title = paste("Cond =",
+                round(base::kappa(
+                  simulated_data[,-ncol(simulated_data)],
+                  exact = TRUE),
+                  0)))
+```
+
+```{r,echo=TRUE}
+ggcorrplot::ggcorrplot(
+  cor(simulated_data_train),
+  lab = TRUE,
+  title = paste("Cond =",
+                round(base::kappa(
+                  simulated_data_train[,-ncol(simulated_data_train)],
+                  exact = TRUE),
+                  0)))
+```
+
+```{r,echo=TRUE}
+ggcorrplot::ggcorrplot(
+  cor(simulated_data_test),
+  lab = TRUE,
+  title = paste("Cond =",
+                round(base::kappa(
+                  simulated_data_test[,-ncol(simulated_data_test)],
+                  exact = TRUE),
+                  0)))
+```
+
+### Estimation
+
+#### OLS
+
+```{r,echo=TRUE}
+
+
+```
+
+```{r,echo=TRUE}
+
+  
+```
