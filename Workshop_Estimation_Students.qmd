@@ -3,7 +3,6 @@ title: "Estimating Linear Models in R: "
 subtitle: "from Ordinary Least Squares to Maximum Entropy via GCEstim"
 title-block-banner: "#70AD47"
 title-block-banner-color: "white"
-date: 2025-10-27
 format: 
   html:
     toc: true
@@ -127,3 +126,4 @@ ggcorrplot::ggcorrplot(
 
   
 ```
+
