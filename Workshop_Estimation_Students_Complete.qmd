@@ -1,0 +1,522 @@
+---
+title: "Estimating Linear Models in R: "
+subtitle: "from Ordinary Least Squares to Maximum Entropy via GCEstim"
+title-block-banner: "#AB1A2D"
+title-block-banner-color: "white"
+date: 2025-11-05
+author:
+  - name: Jorge Cabral
+    id: jc
+    email: jorgecabral@ua.pt
+    affiliations:
+      - name: Department of Mathematics, University of Aveiro, Aveiro, Portugal
+        id: 1
+        department: Department of Mathematics
+        city: Aveiro
+        country: Portugal
+        url: https://www.ua.pt/pt/dmat
+      
+      - name: CIDMA, University of Aveiro, Aveiro, Portugal
+        id: 2
+        department: University of Aveiro
+        city: Aveiro
+        country: Portugal
+        url: https://cidma.ua.pt/
+    attributes:
+        corresponding: true
+format: 
+  html:
+    toc: true
+    toc_float: yes
+    toc-location: left
+    toc-depth: 6
+    theme: Sandstone
+    highlight-style: kate
+    code-link: true
+    code-fold: show
+    code-tools: true
+    df-print: paged
+number-sections: true
+bibliography: references.bib
+editor: source
+---
+```{r}
+#| echo: false
+
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE
+)
+
+options(scipen=999)
+```
+
+![](UniCV.png) 
+
+## Introduction
+
+One of the most widely used data analysis techniques is univariate multiple linear regression. In general, it proposes to mathematically model the relation between a dependent variable and a set of independent variables (or predictors) in order to understand whether the latter predict and/or explain the former. In the modelling process some assumptions should be imposed [@Greene2008].\
+Data transformations are sometimes applied, being one of those the standardization of the variables. This is done by subtracting the mean from each and then dividing by their respective standard deviation. The estimated coefficients (from now on referred as coefficients) are called standardized coefficients [@Bring1994].\
+Consider the univariate multiple linear regression model given by
+\begin{align}
+ y &= X\beta + \epsilon,
+\end{align}
+where $y$ denotes a $(N \times 1)$ vector of noisy observations, $N \in \mathbb{N}$, $\beta$ is a $((K+1) \times 1)$ vector of unknown parameters or coefficients, $K \in \mathbb{N}$, $X$ is a known $(N \times (K+1))$ design matrix and $\epsilon$ is a $(N \times 1)$ vector of random disturbances (errors), usually assumed to have a conditional expected value of zero and representing spherical disturbances, i.e, $E\left[ \epsilon | X\right]=0$ and $E[\epsilon \epsilon'|X]=\sigma^2I$, where $I$ is a ($N \times N$) identity matrix and $\sigma^2$ is the error variance.
+
+The univariate multiple linear regression model can be written as
+\begin{align}
+	y &= \beta_0 + \beta_1 x_{1} + \beta_2 x_{2} + \dots + \beta_K x_{K} + \epsilon,
+\end{align}
+and standardizing $y$ and $x_j,j \in \left\lbrace 1,\dots,K\right\rbrace$ the following results are obtained
+\begin{align}
+%	y^* &= f^*(y^*) + \epsilon^* 
+ y^* &= X^*b + \epsilon^*\\
+	y^* &= b_0 + b_1x_1^* + b_2x_2^* + \dots + b_Kx_K^* + \epsilon^*,  
+\end{align}
+where
+\begin{align} y_i^*&=\frac{y_i-\frac{\sum_{i=1}^{N}y_i}{N}}{\sqrt{\frac{1}{N}\sum_{i=1}^{N}\left( y_i-\frac{\sum_{i=1}^{N}y_i}{N}\right)^2}},\\ x_{ji}^*&=\frac{x_{ji}-\frac{\sum_{i=1}^{N}x_{ji}}{N}}{\sqrt{\frac{1}{N}\sum_{i=1}^{N}\left( x_{ji}-\frac{\sum_{i=1}^{N}x_{ji}}{N}\right)^2}},\\ b_j&=\frac{\sqrt{\frac{1}{N}\sum_{i=1}^{N}\left( x_{ji}-\frac{\sum_{i=1}^{N}x_{ji}}{N}\right)^2}}{\sqrt{\frac{1}{N}\sum_{i=1}^{N}\left( y_i-\frac{\sum_{i=1}^{N}y_i}{N}\right)^2}}\beta_j,  \label{stand_coef_1}
+\end{align}
+\noindent with $j\in \left\lbrace 1,\dots,K\right\rbrace$, and $b_0=0$. In this formulation, $b_j$ are called standardized coefficients.\
+
+<br>
+
+### Ordinary Least Squares
+
+The Ordinary Least Squares (OLS) estimator of $\beta$ takes the form
+\begin{align}
+	\widehat{\beta}^{OLS}= \begin{bmatrix}
+		\widehat{\beta}_0^{OLS}\\
+		\widehat{\beta}_1^{OLS}\\
+		\widehat{\beta}_2^{OLS}\\
+		\vdots \\
+		\widehat{\beta}_K^{OLS}
+	\end{bmatrix} 
+	&= \underset{\beta}{\operatorname{argmin}} \|y-X\beta\|^2\\
+	&= \left(X'X\right)^{-1}X'y,
+\end{align}
+\noindent where $X'$ is the transpose of $X$.
+
+<br>
+
+### Ridge regression
+
+The Ridge regression introduced by Hoerl and Kennard [@Hoerl1970] is an estimation procedure to handle collinearity without removing variables from the regression model. By adding a small non-negative constant (ridge or shrinkage parameter) to the diagonal of the correlation matrix of the explanatory variables, it is possible to reduce the variance of the OLS estimator through the introduction of some bias. Although the resulting estimators are biased, the biases are small enough for these estimators to be substantially more precise than the unbiased estimators.
+The challenge in Ridge regression remains on the selection of the ridge parameter. One straightforward approach is based on simply plotting the coefficients against several possible values for the ridge parameter and inspecting the resulting traces.
+The Ridge Regression estimator of $\lambda$ takes the form
+\begin{align}
+\widehat{\beta}^{ridge}&= \underset{\beta}{\operatorname{argmin}} \|y-X\beta\|^2+\lambda \|\beta\|^2 \\ 
+&=(X'X+\lambda I)^{-1}X'y,
+\end{align}
+where $\lambda \geq 0$ denotes the ridge parameter and $I$ is a $(K \times K)$ identity matrix.
+Note that when $\lambda \rightarrow 0$, the Ridge regression estimator approaches the OLS estimator whereas the Ridge regression estimator approaches the zero vector when $\lambda \rightarrow \infty$. Thus, a trade-off between variance and bias is needed.
+
+<br>
+
+### Generalized Maximum Entropy estimator
+
+Golan et al [@Golan1996] generalized the Maximum Entropy formalism [@Jaynes1957] to linear inverse problems with noise, expressed in the previous chapter linear model. The idea is to treat each $\beta_j$, $j\in\left\{ 0,\dots,K\right\}$, as a discrete random variable with a compact support and $2 \leq M < \infty$ possible outcomes, and each $\epsilon_i$, $i \in \left\{ 1, \dots, N \right\}$, as a finite and discrete random variable with $2 \leq J < \infty$ possible outcomes. Assuming that both the unknown parameters and the unknown error terms may be bounded a priori, the linear model can be presented as
+\begin{equation*}
+	Y=XZp + Vw,
+\end{equation*}
+where 
+\begin{equation}
+	\beta=Zp= \left[ 
+	\begin{array}{cccc}
+		z'_1   & 0      & \cdots & {0}   \\
+		0      & z'_2   & \cdots & {0}   \\
+		\vdots & \vdots & \ddots & \vdots\\
+		0      & 0      & \cdots & {z}'_K
+	\end{array}\right]
+	\left[ 
+	\begin{array}{c}
+		{p}_1 \\
+		{p}_2 \\
+		\vdots\\
+		{p}_K
+	\end{array}\right],
+\end{equation}
+with ${Z}$ a $(K \times (K\times M))$ matrix of support values and ${p}$ a $((K\times M) \times 1)$ vector of unknown probabilities, and
+\begin{equation}
+	\epsilon={Vw}= \left[ 
+	\begin{array}{cccc}
+		v'_1   & 0      & \cdots & {0}   \\
+		0      & v'_2   & \cdots & {0}   \\
+		\vdots & \vdots & \ddots & \vdots\\
+		0      & 0      & \cdots & v'_N
+	\end{array}\right]
+	\left[ \begin{array}{c}
+		w_1 \\
+		w_2 \\
+		\vdots\\
+		w_N
+	\end{array}\right],
+\end{equation}
+with $V$ a $(N \times (N\times J))$ matrix of support values and $w$ a $((N\times J) \times 1)$ vector of unknown probabilities.
+For the linear regression model, the Generalized Maximum Entropy (GME) estimator is given by
+	\begin{equation}
+		\hat{\beta}^{GME}(Z,V) = \underset{p,w}{\operatorname{argmax}}
+		\left\{-p' \ln p - w' \ln w \right\},
+		\label{Golan631}
+	\end{equation}
+	subject to the model constraint
+	\begin{equation*}
+		Y=XZp + Vw,
+	\end{equation*}
+	and the additivity constraints for $p$ and $w$, respectively,
+	\begin{equation*}
+		\begin{array}{c}
+			1_K=(I_K \otimes 1'_M)p,\\
+			1_N=(I_N \otimes 1'_J)w,
+		\end{array}
+	\end{equation*}
+where $\otimes$ represents the Kronecker product, ${1}$ is a column vector of ones with a specific dimension, ${I}$ is an identity matrix with a specific dimension and ${Z}$ and ${V}$ are the matrices of supports, and ${p}>{0}$ and ${w}>{0}$ are probability vectors to be estimated.
+The GME estimator generates the optimal probability vectors $\widehat{{p}}$ and $\widehat{{w}}$ that can be used to form point estimates of the unknown parameters and the unknown random errors. Since the objective function is strictly concave in the interior of the additivity constraint set, a unique solution for the GME estimator is guaranteed if the intersection of the model and the additivity constraint sets is non-empty [@Golan1996].
+The supports in matrices ${Z}$ and ${V}$ are defined as being closed and bounded intervals within which each parameter or error is restricted to lie, implying that researchers need to provide exogenous information (which, unfortunately, it is not always available). This is considered the main weakness of the GME estimator [@Caputo2008]. Golan et al [@Golan1996] discuss these issues in the case of minimal prior information: for the unknown parameters, the authors recommend the use of wide bounds (this is naturally subjective) for the supports in ${Z}$, without extreme risk consequences; for the unknown errors, the authors suggest the use of the three-sigma rule with a sample scale parameter [@Pukelsheim1994]. The number of points $M$ in the supports is less controversial and are usually used in the literature between $3$ and $7$ points, since there is likely no significant improvement in the estimation with more points in the supports. The three-sigma rule, considering the standard deviation of the noisy observations and $J=3$ points in the supports is usually adopted.
+
+<br>
+
+## Setting up
+
+### R software
+
+ > "R is a free software environment for statistical computing and graphics. It compiles and runs on a wide variety of UNIX platforms, Windows and MacOS." --- [R software](https://www.r-project.org/) [@RCore2025]
+
+Follow [https://cran.r-project.org/](https://cran.r-project.org/) to install it.
+
+![](CRAN.png)  
+<br>
+
+### R Studio
+
+> "RStudio is an integrated development environment (IDE) designed to support multiple languages, including both R and Python." --- [RStudio](https://docs.posit.co/ide/user/)
+
+Follow [https://posit.co/downloads/](https://posit.co/downloads/) to install it.
+
+![](RStudio.png)  
+
+<br>
+
+### Packages
+
+During the workshop, several R packages will be necessary.
+Open R Studio and create a new Quarto document.
+
+![](NewFile.png)
+
+![](NewFile2.png)
+<br>
+Insert the following code inside the code chunk. 
+
+```{r, echo=TRUE,warning=FALSE,message=FALSE}
+# install.packages("devtools")
+library(devtools)
+# install.packages("ggcorrplot")
+library(ggcorrplot)
+# install.packages("glmnet")
+library(glmnet)
+# install.packages("GCEstim")
+library(GCEstim)
+```
+
+[https://cran.r-project.org/web/packages/GCEstim/index.html](https://cran.r-project.org/web/packages/GCEstim/index.html)
+![](CRAN_GCEstim.png)  
+
+[https://github.com/jorgevazcabral](https://github.com/jorgevazcabral)
+![](Github.png)  
+
+<br>
+
+## Simulated Data
+
+### Low collinearity
+
+#### Generate Data
+
+```{r,echo=TRUE}
+n = 100 # Number of individuals
+intercept.beta = 0 # Intercept
+y.gen.cont.beta = c(3, 6, 9) # Coefficients used for generating y
+cont.k = 0 # Number of noisy continuous variables 
+condnumber = 1 # Condition number of the X matrix 
+seed <- 1357
+
+simulated_data_coef <- 
+  c(intercept.beta,
+    rep(0, cont.k),
+    y.gen.cont.beta)
+```
+
+```{r,echo=TRUE}
+
+simulated_data <-
+  fngendata(
+    n = n,
+    cont.k = cont.k, 
+    y.gen.cont.beta = y.gen.cont.beta,
+    intercept.beta = intercept.beta,
+    Xgenerator.method = "svd",
+    condnumber = condnumber,
+    seed = seed)
+
+prop_train = 0.7
+
+set.seed(seed)
+ind <- sample(1:n,
+              floor(prop_train * n))
+
+simulated_data_train <- simulated_data[ind,]
+simulated_data_test <- simulated_data[-ind,]
+```
+
+##### Summary
+
+```{r,echo=TRUE}
+summary(simulated_data_train)
+```
+
+##### Correlation matrix
+
+::: {.panel-tabset .nav-pills}
+
+###### All
+
+```{r,echo=TRUE}
+ggcorrplot::ggcorrplot(
+  cor(simulated_data),
+  lab = TRUE,
+  title = paste("Cond =",
+                round(base::kappa(
+                  simulated_data[,-ncol(simulated_data)],
+                  exact = TRUE),
+                  0)))
+```
+
+###### Train
+
+```{r,echo=TRUE}
+ggcorrplot::ggcorrplot(
+  cor(simulated_data_train),
+  lab = TRUE,
+  title = paste("Cond =",
+                round(base::kappa(
+                  simulated_data_train[,-ncol(simulated_data_train)],
+                  exact = TRUE),
+                  0)))
+```
+
+###### Test
+
+```{r,echo=TRUE}
+ggcorrplot::ggcorrplot(
+  cor(simulated_data_test),
+  lab = TRUE,
+  title = paste("Cond =",
+                round(base::kappa(
+                  simulated_data_test[,-ncol(simulated_data_test)],
+                  exact = TRUE),
+                  0)))
+```
+:::
+
+<br>
+
+#### Estimation
+
+##### OLS
+
+```{r,echo=TRUE}
+sd_model_OLS <- 
+  lm(data = simulated_data_train,
+     y ~ . # or y ~ X001 + X002 + X003
+     )
+
+```
+
+```{r,echo=TRUE}
+# summary of the linear model
+summary(sd_model_OLS)
+
+# coefficients of the linear model
+sd_model_OLS_coef <- coef(sd_model_OLS)
+```
+
+```{r,echo=TRUE}
+# prediction error RMSE
+(sd_model_OLS_RMSE_train <-
+   accmeasure(fitted(sd_model_OLS),
+              simulated_data_train$y))
+
+(sd_model_OLS_RMSE_test <-
+   accmeasure(predict(sd_model_OLS,
+                simulated_data_test),
+              simulated_data_test$y))
+
+# precision error RMSE
+(sd_model_OLS_beta_RMSE <-
+    accmeasure(sd_model_OLS_coef,
+               simulated_data_coef))
+```
+
+```{r,echo=TRUE}
+#| fig.width: 9
+#| fig.height: 9
+
+par(mfrow = c(2,2))
+plot(sd_model_OLS)
+```
+
+<br>
+
+##### Ridge
+
+```{r,echo=TRUE}
+set.seed(seed)
+sd_model_ridge <- 
+  glmnet::cv.glmnet(
+    x = as.matrix(simulated_data_train[,-ncol(simulated_data_train)]),
+    y = simulated_data_train[,ncol(simulated_data_train)],
+    alpha = 0)
+```
+
+```{r,echo=TRUE}
+plot(sd_model_ridge)
+```
+
+```{r,echo=TRUE}
+plot(sd_model_ridge$glmnet.fit,
+     xvar = "lambda")
+abline(v = -c(log(sd_model_ridge$lambda.min),
+             log(sd_model_ridge$lambda.1se)),
+       lty = 3)
+abline(h = simulated_data_coef,
+       lty = 2)
+```
+
+```{r,echo=TRUE}
+(sd_model_ridge_coef <-
+  t(as.matrix(coef(sd_model_ridge,
+                   s = "lambda.min")))) # s = "lambda.1se"
+```
+
+```{r,echo=TRUE}
+(sd_model_ridge_RMSE_train <-
+  accmeasure(predict(sd_model_ridge,
+                     as.matrix(simulated_data_train[,-ncol(simulated_data_train)]),
+                     s = "lambda.min"),
+       simulated_data_train$y))
+
+(sd_model_ridge_RMSE_test <-
+  accmeasure(predict(sd_model_ridge,
+                     as.matrix(simulated_data_test[,-ncol(simulated_data_test)]),
+                     s = "lambda.min"),
+             simulated_data_test$y))
+
+(sd_model_ridge_beta_RMSE <-
+  accmeasure(sd_model_ridge_coef,
+             simulated_data_coef))
+```
+
+<br>
+
+##### GCE
+
+```{r,echo=TRUE}
+#help(lmgce)
+```
+
+```{r,echo=TRUE}
+sd_model_GCE <- 
+  lmgce(data = simulated_data_train,
+        y ~ .,
+        boot.B = 100,
+        seed = seed
+      )
+```
+
+```{r,echo=TRUE}
+summary(sd_model_GCE)
+sd_model_GCE_coef <- coef(sd_model_GCE) 
+```
+
+```{r,echo=TRUE}
+(sd_model_GCE_RMSE_train <-
+  accmeasure(fitted(sd_model_GCE),
+             simulated_data_train$y))
+
+(sd_model_GCE_RMSE_test <-
+    accmeasure(predict(sd_model_GCE,
+                       simulated_data_test),
+               simulated_data_test$y))
+
+(sd_model_GCE_beta_RMSE <-
+  accmeasure(sd_model_GCE_coef,
+             simulated_data_coef))
+```
+
+```{r,echo=TRUE}
+#| fig.width: 7
+#| fig.height: 4
+
+plot(sd_model_GCE, ci.method = "percentile")
+```
+
+<br>
+
+##### All
+
+```{r}
+#| echo: false
+#| code-fold: hide
+
+DT::datatable(
+  round(
+  data.frame(
+    rbind(
+      cbind(
+        "Generating" = simulated_data_coef, 
+        OLS = sd_model_OLS_coef,
+        ridge = as.numeric(sd_model_ridge_coef),
+        GCE = sd_model_GCE_coef
+        ),
+      beta_RMSE = c(0,
+                    sd_model_OLS_beta_RMSE,
+                    sd_model_ridge_beta_RMSE,
+                    sd_model_GCE_beta_RMSE
+                    ),
+      RMSE_train = c(0,
+                     sd_model_OLS_RMSE_train,
+                     sd_model_ridge_RMSE_train,
+                     sd_model_GCE_RMSE_train),
+      RMSE_test = c(0,
+                    sd_model_OLS_RMSE_test,
+                    sd_model_ridge_RMSE_test,
+                    sd_model_GCE_RMSE_test)
+      )
+    ),
+  5),
+  options = list(
+    lengthChange = TRUE,
+    scrollX = TRUE,
+    pageLength = 25)
+  )
+```
+
+## Web R Shiny App
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: hide
+lmgceAddin()
+```
+
+
+![](Addin.png)
+
+<br>
+
+## Acknowledgments
+
+This workshop is supported by the Center for Research and Development in Mathematics and Applications (CIDMA) under the Portuguese Foundation for Science and Technology (FCT, [https://ror.org/00snfqn58](https://ror.org/00snfqn58)) Multi-Annual Financing Program for R&D Units, grants UID/4106/2025 and UID/PRR/4106/2025.
+
+![](Acknow.png)
